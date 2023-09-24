@@ -86,21 +86,28 @@ class TextAssistant:
         if self.PINECONE_INDEX_NAME is None:
             raise ValueError("PINECONE_INDEX_NAME not found in .env file")
 
-    def correct_text(self, text):
-        # Enviar el texto al chatbot para obtener una respuesta corregida
-        res = ""
+def correct_text(self, text):
+    # Dividir el texto en párrafos manejables
+    parrafos = self.dividir_en_parrafos(text)
 
-        command = "Please review the following text and correct any grammatical or stylistic errors while preserving its original language:\n\n"
-        for each in text:
-            promp = command + each
-            print(promp)
-            response = self.chatbot.chat(
-                promp,
-                print_cache_score=True,
-            )
-            res += response.message.content
-        # Devolver el contenido de la respuesta del chatbot
-        return res
+    # Inicializar una variable para almacenar el texto corregido
+    res = ""
+
+    command = "Please review the following text and correct any grammatical or stylistic errors while preserving its original meaning:\n\n"
+
+    # Corregir cada párrafo individualmente
+    for parrafo in parrafos:
+        promp = command + parrafo
+        print(promp)
+        response = self.chatbot.chat(
+            promp,
+            print_cache_score=True,
+        )
+        res += response.message.content
+
+    # Devolver el texto corregido
+    return res
+
 
     def suggestText(self, text):
         # Enviar el texto al chatbot para obtener la retroalimentación del archivo de entrada
