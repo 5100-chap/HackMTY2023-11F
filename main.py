@@ -29,9 +29,12 @@ def mostrar_inicio():
 
     user_input = st.text_input("Introduzca su texto aquí:")
 
-
 # Crear un checkbox en Streamlit
     show_content = st.checkbox("¿Desea adjuntar un archivo?")
+
+
+
+    st.write("\n".join(user_input))
 
 # Mostrar contenido si el checkbox está marcado
     if show_content:
