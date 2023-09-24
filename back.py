@@ -86,34 +86,38 @@ class TextAssistant:
         if self.PINECONE_INDEX_NAME is None:
             raise ValueError("PINECONE_INDEX_NAME not found in .env file")
 
-def correct_text(self, text):
-    # Dividir el texto en párrafos manejables
-    parrafos = self.dividir_en_parrafos(text)
+    def correct_text(self, text):
+        # Si 'text' es una lista, unir todos los elementos en un único string
+        if isinstance(text, list):
+            text = "\n".join(text)
 
-    # Inicializar una variable para almacenar el texto corregido
-    res = ""
+        # Dividir el texto en párrafos manejables
+        parrafos = self.dividir_en_parrafos(text)
 
-    command = "Please review the following text and correct any grammatical or stylistic errors while preserving its original meaning:\n\n"
+        # Inicializar una lista para almacenar los párrafos corregidos
+        res = []
 
-    # Corregir cada párrafo individualmente
-    for parrafo in parrafos:
-        promp = command + parrafo
-        print(promp)
-        response = self.chatbot.chat(
-            promp,
-            print_cache_score=True,
-        )
-        res += response.message.content
+        command = "Please review the following text and correct any grammatical or stylistic errors while preserving its original meaning:\n\n"
 
-    # Devolver el texto corregido
-    return res
+        # Corregir cada párrafo individualmente
+        for parrafo in parrafos:
+            prompt = command + parrafo
+            print(prompt)
+            response = self.chatbot.chat(
+                prompt,
+                print_cache_score=True,
+            )
+            # Agregar el párrafo corregido a la lista
+            res.append(response.message.content.strip())  # Utilizamos .strip() para asegurarnos de eliminar espacios extra al principio o al final
 
+        # Devolver el texto corregido separado por párrafos
+        return "\n\n".join(res)
 
     def suggestText(self, text):
         # Enviar el texto al chatbot para obtener la retroalimentación del archivo de entrada
         res = ""
         for each in text:
-            command = "Based on the following text, while preserving its original language, can you suggest three continuations or improvements in bullet points?\n\n" + each + "\n\nSuggestions:\n- "
+            command = "Given the text below, provide suggestions in bullet points, ensuring they are in the same language as the input text.\n\n" + each + "\n\nSuggestions:\n- "
             response = self.chatbot.chat(
                 command,
                 print_cache_score=True,
@@ -137,18 +141,38 @@ def correct_text(self, text):
         return res
 
     def traductor(self, text, target_language):
-        command = (
-            f"Please translate the following text into {target_language}. "
-            f"Ensure accuracy and maintain the context and nuance of the original content:\n\n"
-            f'"{text}"'
-        )
-        response = self.chatbot.chat(
-            command,
-            print_cache_score=True,
-        )
-        return response.message.content
+        res = ""
+        for each in text:
+            command = (
+                f"Please translate the following text into {target_language}. "
+                f"Ensure accuracy and maintain the context and nuance of the original content:\n\n"
+                f'"{each}"' 
+            )
+            print(command)
+            response = self.chatbot.chat(
+                command,
+                print_cache_score=True,
+            )
+            res += response.message.content
+        return res
     
-    def dividir_por_puntuacion(self, texto, inicio=100):
+    def dividir_en_parrafos(self, texto):
+        # Primero dividimos por líneas vacías (para obtener párrafos)
+        parrafos = texto.split('\n\n')
+        # Luego, si un párrafo es demasiado largo, lo dividimos en sub-párrafos
+        res = []
+        for parrafo in parrafos:
+            inicio = 0
+            while inicio < len(parrafo):
+                if len(parrafo) > 500:
+                    fragmento, inicio = self.dividir_por_puntuacion(parrafo, inicio)
+                    res.append(fragmento)
+                else:
+                    res.append(parrafo[inicio:])
+                    break
+        return res
+    
+    def dividir_por_puntuacion(self, texto, inicio=1500):
         fin = inicio + 400
 
         if fin < len(texto):
@@ -166,28 +190,3 @@ def correct_text(self, text):
                 fin = min(fin + 400, len(texto))
 
         return texto[inicio:fin], fin
-
-    def dividir_en_parrafos(self, texto):
-        parrafos = []
-        if '\n\n' or '\n' in texto:
-            if '\n' in texto:
-                breaker = '\n'
-            else:
-                breaker = '\n\n'
-            temp_parrafos = texto.split(breaker)
-            for par in temp_parrafos:
-                inicio = 0
-                while inicio < len(par):
-                    if len(par) > 500:
-                        fragmento, inicio = self.dividir_por_puntuacion(par, inicio)
-                        parrafos.append(fragmento)
-                    else:
-                        parrafos.append(par[inicio:])
-                        break
-        else:
-            inicio = 0
-            while inicio < len(texto):
-                fragmento, inicio = self.dividir_por_puntuacion(texto, inicio)
-                parrafos.append(fragmento)
-
-        return parrafos
